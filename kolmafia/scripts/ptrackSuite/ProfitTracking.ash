@@ -1,6 +1,7 @@
 script ProfitTracking;
 notify the dictator;
-import DicsLibrary;
+// Original DicsLibrary accounting semantics live in the shared, trimmed adapter.
+import <don_track_compat.ash>;
 
 void LogAccountvalCheckpoint(string event);
 
