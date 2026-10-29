@@ -85,27 +85,53 @@ boolean resetDailyTracking() {
     }
 }
 
+boolean ptrack_safe_event(string name) {
+    if (length(name) < 1 || length(name) > 64) return false;
+    matcher valid = create_matcher("^[A-Za-z0-9_-]+$", name);
+    return find(valid);
+}
+
 void addBreakpoint(string name) {
+    if (!ptrack_safe_event(name)) {
+        print("ptrack: unsafe breakpoint name; use 1-64 letters/numbers/_/-.", "red");
+        return;
+    }
     resetDailyTracking();
     string[int] split_map = split_string(get_property("thoth19_event_list"), ",");
-    int last = count(split_map) -1;
-	if (last >= 1) {
-		for it from 0 to last {
-            if (split_map[it] == name) {
-                addBreakpoint(name + "1");
-                return;
-            }
+    string candidate = name;
+    // Bounded, non-recursive duplicate-name handling.
+    for attempt from 0 to 99 {
+        boolean found_duplicate = false;
+        foreach index, prior in split_map {
+            if (prior == candidate) found_duplicate = true;
         }
-	}
-    log_both_and_add(name);
+        if (!found_duplicate) {
+            log_both_and_add(candidate);
+            return;
+        }
+        candidate = name + to_string(attempt + 1);
+        if (length(candidate) > 64) {
+            print("ptrack: duplicate-name suffix exceeds 64 characters.", "red");
+            return;
+        }
+    }
+    print("ptrack: no available breakpoint name after 100 attempts.", "red");
 }
 
 void compareBreakpoints(string bp1, string bp2) {
+    if (!ptrack_safe_event(bp1) || !ptrack_safe_event(bp2)) {
+        print("ptrack: invalid comparison breakpoint name.", "red");
+        return;
+    }
     string date = get_property("prusias_profitTracking_date");
     compare_both(date, bp1, date, bp2, true);
 }
 
 void expressiveCompareBreakpoints(string bp1, string bp2) {
+    if (!ptrack_safe_event(bp1) || !ptrack_safe_event(bp2)) {
+        print("ptrack: invalid descriptive comparison breakpoint name.", "red");
+        return;
+    }
     string date = get_property("prusias_profitTracking_date");
     compare_both(date, bp1, date, bp2, false);
 }
@@ -198,6 +224,10 @@ void addBlacklistItem(string itemToAdd) {
 }
 
 void addPriceOverrideItem(string itemToAdd, int price) {
+    if (price < 0 || price > 1000000000) {
+        print("ptrack: override must be between 0 and 1,000,000,000 meat.", "red");
+        return;
+    }
     item it = itemToAdd.to_item();
     if (it == $item[none]) {
         print("Not a valid item. Double check spelling", "red");
@@ -212,6 +242,10 @@ void addPriceOverrideItem(string itemToAdd, int price) {
 }
 
 void redeemScreege() {
+    if (!user_confirm("Redeem all available Screege items via use/autosell?", 30000, false)) {
+        print("ptrack: Screege redemption cancelled.", "orange");
+        return;
+    }
     boolean[item] useItems = $items[
         ancient vinyl coin purse,
         duct tape wallet,
@@ -274,9 +308,7 @@ void redeemScreege() {
 
 
 void main(string option) {
-    if (get_property("prusias_profitTracking_use_irrat_list") == "") {
-        set_property("prusias_profitTracking_use_irrat_list", "true");
-    }
+    // Read-only commands must not silently mutate preferences.
 
     
     string [int] commands = option.split_string("\\s+");
