@@ -110,6 +110,12 @@ function readProfitComparisons() {
 }
 
 function readInventory(checkpoint) {
+    // Checkpoint labels originated in local log files. Never use unchecked
+    // event text as a path component in a relay-facing reader.
+    if (!/^\\d{8}$/.test(checkpoint.date) ||
+        !/^[A-Za-z0-9_-]{1,64}$/.test(checkpoint.event)) {
+        return { found: false, items: {} };
+    }
     var filename = dataPath("inventory/" + checkpoint.date + " " + checkpoint.event + ".txt");
     var content = readText(filename);
     var result = { found: content.length > 0, items: {} };
