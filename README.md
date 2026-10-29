@@ -31,7 +31,9 @@ If you previously installed the original upstream project, use `git list` to con
 
 ## Dependencies
 
-One declared dependency: [libraryaddict/KolItemPrices](https://github.com/libraryaddict/KolItemPrices) (listed in [`kolmafia/dependencies.txt`](kolmafia/dependencies.txt)).
+Two declared dependencies: [libraryaddict/KolItemPrices](https://github.com/libraryaddict/KolItemPrices) and [donCannoli-burns/don-ash-lib](https://github.com/donCannoli-burns/don-ash-lib), both listed in [`kolmafia/dependencies.txt`](kolmafia/dependencies.txt).
+
+`ProfitTracking.ash` now imports `don_track_compat.ash` from `don-ash-lib` instead of the bundled `DicsLibrary.ash`. This trimmed adapter preserves the original item-counting, user price overrides, special item valuation, historical-price logic, and Irrat price support that pTrack uses, while excluding unrelated DicsLibrary gameplay helpers. Original credit remains with The Dictator and upstream pTrack. The original file is retained in Git history. **Static source checks passed; runtime `verify ptrack` still needs to be performed in KoLmafia before relying on reports.**
 
 ## How to use
 
