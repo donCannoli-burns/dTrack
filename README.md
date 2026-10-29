@@ -65,3 +65,9 @@ ptrack breakfast
 - View previous days.
 - Exclude outlier items from profit comparisons.
 - Compare across days.
+
+## Hardened staged absorption (2026-10-29)
+
+This suite is licensed **GPL-3.0**, with substantial upstream work by The Dictator and Thoth19. Its six identified scripts and the `relay_ptrack.js` entrypoint are staged under [don-ash-lib/dtrack-suite](https://github.com/donCannoli-burns/don-ash-lib/tree/main/dtrack-suite) as an **isolated, non-installable source shelf**, preserving the GPL license. The root don-ash-lib manifest still installs only the master ASH library; it does **not** make this staged suite available to KoLmafia.
+
+This dTrack repository remains the required **active** tracking dependency of dLooper until runtime compilation, relay UI, existing saved reports, and valuation regression checks pass. Hardening here has removed implicit storage pull-all, bounded duplicate names, guarded token pricing and path construction, and added an approval gate before Screege redemption. See the staged suite README for detailed limitations. **Do not delete dTrack yet.**
