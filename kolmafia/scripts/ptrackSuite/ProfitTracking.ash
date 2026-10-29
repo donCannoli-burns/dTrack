@@ -19,8 +19,8 @@ void LogItems(string event, boolean destruct) {
 	else {
 		cli_execute("refresh shop");
 		cli_execute("refresh storage");
-		if ( can_interact() && get_property_int("lastEmptiedStorage")<0 )
-			cli_execute("pull all");
+		// Inventory snapshots must not take irreversible gameplay actions.
+		// total_amount() already includes storage, so do NOT auto-pull items.
 		cli_execute("refresh inv");
 		print("Profit: Logging Items...","fuchsia");
 		foreach it in $items[]
