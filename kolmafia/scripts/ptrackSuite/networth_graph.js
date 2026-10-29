@@ -1005,7 +1005,9 @@ function main(args) {
     }
     
     // Save HTML to file
-    var outputPath = "networth_graph_" + myName() + ".html";
+    // Player name is not trusted as a path fragment; restrict the filename.
+    var safePlayerName = String(myName()).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 64);
+    var outputPath = "networth_graph_" + safePlayerName + ".html";
     try {
         var success = bufferToFile(html, outputPath);
         if (success) {
