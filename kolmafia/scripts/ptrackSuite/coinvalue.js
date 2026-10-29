@@ -1,40 +1,59 @@
-const { isCoinmasterItem, isAccessible, printHtml, sellsItem, mallPrice, sellPrice } = require("kolmafia");
-Item.all().forEach((i) => { if (isCoinmasterItem(i)) { mallPrice(i) }});
+// Hardened read-only coinmaster valuation; derived from Prusias-kol/pTrack.
+// GPL-3.0 licensed component. Experimental, use at your own risk.
+"use strict";
 
-function addCommas(nStr) {
-    nStr += '';
-    var x = nStr.split('.');
-    var x1 = x[0];
-    var rgx = /(\d+)(\d{3})/;
-    while (rgx.test(x1)) {
-            x1 = x1.replace(rgx, '$1' + ',' + '$2');
-    }
-    return x1;
+const { Coinmaster, Item, isAccessible, sellsItem, mallPrice, sellPrice, printHtml } = require("kolmafia");
+
+function escapeHtml(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+function numberText(value) {
+    if (!Number.isFinite(value)) return "N/A";
+    return Math.round(value).toLocaleString("en-US");
 }
 
-groupedMap = new Map();
-for (let cm of Coinmaster.all().filter((x) => x !== Coinmaster.get("none") && x.availableTokens && isAccessible(x))) {
-    if (groupedMap.has(cm.token)) {
-        groupedMap.get(cm.token).push(cm)
+function main() {
+    const groups = new Map();
+    const available = Coinmaster.all().filter(cm =>
+        cm !== Coinmaster.get("none") && cm.availableTokens > 0 && isAccessible(cm));
+    for (const cm of available) {
+        const key = String(cm.token);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(cm);
     }
-    else {
-        groupedMap.set(cm.token, [cm])
-    }
-}
-var total = 0;
-for (let [key, value] of groupedMap.entries()) {
-    printHtml("<font color=eda800>" + key + "</font>");
-	var coinSum = 0;
-    for (let cm of value) {
-        let availableItems = Item.all().filter((i) => sellsItem(cm, i)).map((i) => { return { it: i, value: 0.9* mallPrice(i) / sellPrice(cm, i)}});
-        availableItems.sort((a, b) => b.value - a.value);
-        let best = availableItems[0];
-        if (best) {
-            printHtml("For coinmaster <b>" + cm + "</b> you have " + cm.availableTokens + " " + cm.token + " and the best way to spend them is on " + best.it + " with a value of " + addCommas(best.value) + " meat per token.");
-			coinSum = Math.max(cm.availableTokens * best.value, coinSum);
+    let total = 0;
+    for (const [token, coinmasters] of groups) {
+        printHtml("<b>" + escapeHtml(token) + "</b>");
+        let bestGroupValue = 0;
+        for (const cm of coinmasters) {
+            let best = null;
+            for (const it of Item.all()) {
+                if (!sellsItem(cm, it)) continue;
+                const price = sellPrice(cm, it);
+                if (!(price > 0)) continue; // No divide-by-zero or invalid token prices.
+                const mall = mallPrice(it);
+                if (!(mall > 0)) continue;
+                const value = 0.9 * mall / price;
+                if (!Number.isFinite(value) || value <= 0) continue;
+                if (!best || value > best.value) best = { item: it, value };
+            }
+            if (!best) {
+                printHtml("No priced offer for " + escapeHtml(cm) + ".");
+                continue;
+            }
+            const maxValue = cm.availableTokens * best.value;
+            if (Number.isFinite(maxValue)) bestGroupValue = Math.max(bestGroupValue, maxValue);
+            printHtml("For " + escapeHtml(cm) + ": " +
+                escapeHtml(cm.availableTokens) + " tokens; best priced item " +
+                escapeHtml(best.item) + " at approximately " + numberText(best.value) + " Meat/token.");
         }
+        total += bestGroupValue;
+        printHtml("<b>Estimated token-group maximum: " + numberText(bestGroupValue) + " Meat</b>");
     }
-	total += coinSum;
-	printHtml("<b>Max Coin Value = " + addCommas(coinSum) + "</b>");
+    printHtml("<b>Estimated total potential value: " + numberText(total) + " Meat</b>");
+    printHtml("This is an estimate, not a guaranteed sale price.");
 }
-printHtml("<font color=eda800><b>Total Potential Value = " + addCommas(total) + "</b></font>");
+
+module.exports.main = main;
