@@ -1,35 +1,65 @@
-# pTrack
-Thank you to The Dictator and Thoth19 for the majority of the code. Without The Dictator's ProfitTracking.ash and DicsLibrary.ash and Thoth19's TimeTracking.ash this script would not exist.  
+# dTrack
 
-This script functions as a CLI wrapper of their profit trackers to allow you to add breakpoints, keep a daily list of today's breakpoints, and compare breakpoints in order to track profits.
+> **Original project and credit:** [Prusias-kol/pTrack](https://github.com/Prusias-kol/pTrack) by Prusias-kol. This is a separate experimental fork maintained at [donCannoli-burns/dTrack](https://github.com/donCannoli-burns/dTrack).
+>
+> **EXPERIMENTAL — USE AT YOUR OWN RISK.** This fork is not guaranteed to be stable or safe. Review settings and scripts before running them, especially commands that spend turns, change inventory, use the mall, PvP, or ascend. The upstream author is not responsible for modifications in this fork.
 
-To install, run   
+**Additional original-code credit:** The Dictator's `ProfitTracking.ash` and `DicsLibrary.ash`, and Thoth19's `TimeTracking.ash`, provide much of the tracking implementation. These credits are retained from upstream.
+
+This is a gCLI wrapper for profit/time tracking, letting you mark breakpoints, view a daily list, and compare gains and losses between breakpoints.
+
+## Install, update, and remove
+
+Run these commands in the **KoLmafia gCLI** (not your operating system's Git shell).
+
+**Install**
 ```
-git checkout https://github.com/Prusias-kol/pTrack main
-```   
+git checkout https://github.com/donCannoli-burns/dTrack main
+```
 
-## How to Use
-Type `ptrack help` in the gCLI to see available commands.
+**Update**
+```
+git update donCannoli-burns-dTrack-main
+```
 
-To add a breakpoint, type `ptrack add <breakpoint name>`
+**Remove this fork**
+```
+git delete donCannoli-burns-dTrack-main
+```
 
-To list today's breakpoints (or yesterdays if you haven't yet set a breakpoint today), type `ptrack list`
+If you previously installed the original upstream project, use `git list` to confirm its installed project ID before optionally deleting it with `git delete Prusias-kol-pTrack-main`. Avoid keeping upstream and fork versions installed simultaneously when they supply the same script filenames.
 
-To compare two breakpoints (from today or yesterday if you haven't yet set a breakpoint today), type `ptrack compare <bp1> <bp2>`. *Replace the command with* **dcompare** *for a breakdown of your item profits/losses.*
+## Dependencies
 
-To compare all breakpoints on ptrack list, type `ptrack recap`
+One declared dependency: [libraryaddict/KolItemPrices](https://github.com/libraryaddict/KolItemPrices) (listed in [`kolmafia/dependencies.txt`](kolmafia/dependencies.txt)).
 
-### Setting up breakfast 
-If you want to make sure your breakfast profits are also kept track of, instead of running mafia breakfast, run `ptrack breakfast`! If it's your first time running the script today it'll add a breakpoint before running your breakfast.
+## How to use
 
-**Bonus tip**, if you have your mafia configured to run breakfast when logging in, and still want mafia to do that but with ptrack instead:  
+The existing command remains `ptrack`.
 
-Untick breakfast on the Mafia login window.   
-Then, on the top left, KolMafia -> Preferences -> Automation
+```
+ptrack help
+ptrack add <breakpoint name>
+ptrack list
+ptrack compare <bp1> <bp2>
+ptrack recap
+```
 
-In the On Login section, paste `ptrack breakfast`
+- `ptrack add` creates a breakpoint.
+- `ptrack list` lists today's breakpoints (or yesterday's if none have been set today).
+- `ptrack compare` compares two breakpoints; the legacy `dcompare` variant provides an item profit/loss breakdown.
+- `ptrack recap` compares the listed breakpoints.
 
-#### In development
-- View previous days (to help compare progress across days)
-- Exclude an item from profit comparison in case of outliers
-- Compare across days?
+## Breakfast tracking
+
+To capture breakfast profits, invoke `ptrack breakfast` instead of the usual KoLmafia breakfast command. To run it during login, disable the default breakfast checkbox, then set **KoLmafia → Preferences → Automation → On Login** to:
+
+```
+ptrack breakfast
+```
+
+## In development (inherited upstream roadmap)
+
+- View previous days.
+- Exclude outlier items from profit comparisons.
+- Compare across days.
