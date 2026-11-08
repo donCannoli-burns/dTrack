@@ -99,4 +99,4 @@ python -m unittest discover -s tools -p 'test_*.py'
 
 Replace `YOUR_CHARACTER` with the directory name used by KoLmafia. For a containerized KoLmafia installation, use its **mounted** `data/Profit Tracking/<character>` directory. Existing checkpoint values are preserved; the helper never fetches fresh mall prices. Treat intervals crossing ascensions or other counter resets cautiously.
 
-**Verification status:** offline NumPy fixture tests pass in Python 3 with NumPy 2.3.5. Native ASH compilation and live KoLmafia runtime behavior have not been verified. Benchmark native commands against the original before claiming a measured speedup.
+**Verification status:** three offline NumPy fixture tests are included, but have not yet been executed against the committed branch. Native ASH compilation and live KoLmafia runtime behavior have not been verified. Benchmark native commands against the original before claiming a measured speedup.
