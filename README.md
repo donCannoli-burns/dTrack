@@ -100,3 +100,18 @@ python -m unittest discover -s tools -p 'test_*.py'
 Replace `YOUR_CHARACTER` with the directory name used by KoLmafia. For a containerized KoLmafia installation, use its **mounted** `data/Profit Tracking/<character>` directory. Existing checkpoint values are preserved; the helper never fetches fresh mall prices. Treat intervals crossing ascensions or other counter resets cautiously.
 
 **Verification status:** three offline NumPy fixture tests are included, but have not yet been executed against the committed branch. Native ASH compilation and live KoLmafia runtime behavior have not been verified. Benchmark native commands against the original before claiming a measured speedup.
+
+
+### Diagnosing the actual item-count bottleneck
+
+The NumPy analyzer runs offline and **does not accelerate item counting in KoLmafia**. The compatibility library's `total_amount(item)` checks many inventory locations and iterates familiars for each item; `LogItems` and `LogNetworthCheckpoint` call it over `$items[]`. Before changing accounting semantics, use the **read-only** count probe:
+
+```text
+verify ptrackSuite/dtrack_count_probe.ash
+call ptrackSuite/dtrack_count_probe.ash bulk
+call ptrackSuite/dtrack_count_probe.ash parity
+```
+
+`bulk` reads each current collection map once and counts equipped/terrarium/campground items separately. `parity` additionally runs the original `total_amount` against every item and reports any discrepancies (first 12 shown), plus wall-clock milliseconds for each approach. **Do not use the bulk algorithm in production unless mismatch count is zero and the counts agree across representative character states.** In particular, the current installed `don_track_compat.ash` dependency must compile before this probe will work.
+
+The probe deliberately skips `refresh shop`, `refresh storage`, and `refresh inv`; it is measuring *cached item-count enumeration*, not KoLmafia's network-refresh latency. The production `ptrack add` path includes those refreshes and separate item valuation; benchmark them separately before making a speedup claim. Neither probe mode writes checkpoint files, changes preferences, spends turns, or intentionally refreshes the game state.
