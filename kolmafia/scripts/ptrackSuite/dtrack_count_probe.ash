@@ -1,5 +1,31 @@
 script "dtrack_count_probe";
-import <don_track_compat.ash>;
+// Self-contained on purpose: allows counting even if the installed
+// don_track_compat.ash dependency is still failing to compile.
+
+static {
+    boolean[item] PROBE_GARDEN = $items[Peppermint Pip Packet, packet of dragon's teeth, packet of beer seeds, packet of winter seeds, packet of thanksgarden seeds, packet of tall grass seeds, packet of mushroom spores];
+    boolean[item] PROBE_WORKSHED = $items[warbear jackhammer drill press, warbear auto-anvil, warbear induction oven, warbear chemistry lab, warbear high-efficiency still, warbear lp-rom burner, spinning wheel, snow machine, Asdon Martin keyfob (on ring), portable mayo clinic, little geneticist dna-splicing lab, diabolic pizza cube];
+}
+
+// Mirror the current compatibility library's item-count semantics for
+// measurement. This function makes no game-state changes.
+int count_legacy(item it) {
+    int amount = item_amount(it);
+    amount += equipped_amount(it);
+    amount += closet_amount(it);
+    amount += storage_amount(it);
+    amount += display_amount(it);
+    amount += shop_amount(it);
+    foreach f in $familiars[] {
+        if (have_familiar(f) && my_familiar() != f && familiar_equipped_equipment(f) == it)
+            amount += 1;
+    }
+    if (to_boolean(get_property("autoSatisfyWithStash")))
+        amount += stash_amount(it);
+    if ((PROBE_GARDEN contains it || PROBE_WORKSHED contains it) && get_campground() contains it)
+        amount += get_campground()[it];
+    return amount;
+}
 
 // Diagnostic only: do not replace dTrack's production counter until parity
 // has been established against actual character configurations.
@@ -22,7 +48,7 @@ int[item] count_bulk() {
     count_add(totals, get_display());
     count_add(totals, get_shop());
 
-    if (get_property_bool("autoSatisfyWithStash"))
+    if (to_boolean(get_property("autoSatisfyWithStash")))
         count_add(totals, get_stash());
 
     // Equipment is not included in get_inventory(). Enumerate slots once,
@@ -44,11 +70,9 @@ int[item] count_bulk() {
 
     // Match the original special campground accounting, not every campground
     // item (otherwise unrelated campground items could be double-counted).
-    boolean[item] garden = $items[Peppermint Pip Packet, packet of dragon's teeth, packet of beer seeds, packet of winter seeds, packet of thanksgarden seeds, packet of tall grass seeds, packet of mushroom spores];
-    boolean[item] workshed = $items[warbear jackhammer drill press, warbear auto-anvil, warbear induction oven, warbear chemistry lab, warbear high-efficiency still, warbear lp-rom burner, spinning wheel, snow machine, Asdon Martin keyfob (on ring), portable mayo clinic, little geneticist dna-splicing lab, diabolic pizza cube];
     int[item] campground = get_campground();
     foreach it, amount in campground {
-        if ((garden contains it || workshed contains it) && amount != 0)
+        if ((PROBE_GARDEN contains it || PROBE_WORKSHED contains it) && amount != 0)
             totals[it] += amount;
     }
     return totals;
@@ -60,7 +84,7 @@ void main(string mode) {
         print("call ptrackSuite/dtrack_count_probe.ash bulk");
         print("call ptrackSuite/dtrack_count_probe.ash parity");
         print("bulk: count current items from collection maps.");
-        print("parity: also run legacy per-item counter, compare outputs.");
+        print("parity: also run legacy-equivalent per-item counter, compare outputs.");
         print("Neither mode refreshes collections or changes game state.");
         return;
     }
@@ -76,7 +100,7 @@ void main(string mode) {
     started = now_to_int();
     int[item] legacy;
     foreach it in $items[] {
-        int n = total_amount(it);
+        int n = count_legacy(it);
         if (n != 0)
             legacy[it] = n;
     }
