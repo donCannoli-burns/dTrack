@@ -21,22 +21,27 @@ function getDataPath() {
 /**
  * Get item value similar to DicsLibrary.ash itemValue function
  */
-function getItemValue(itemId) {
+function getItemValue(itemId, priceCache) {
+    var key = String(itemId);
+    if (Object.prototype.hasOwnProperty.call(priceCache, key)) {
+        return priceCache[key];
+    }
     var item = toItem(itemId);
-    if (!item || item.tradeable === false) return 0;
-    
-    // Check for historical price
+    if (!item || item.tradeable === false) {
+        priceCache[key] = 0;
+        return 0;
+    }
+
+    var value;
     if (historicalAge(item) < 7.0) {
-        return Math.floor(historicalPrice(item) * ITEM_PRICE_MULTIPLIER);
+        value = Math.floor(historicalPrice(item) * ITEM_PRICE_MULTIPLIER);
+    } else {
+        var mp = mallPrice(item);
+        value = mp > 0 ? Math.floor(mp * ITEM_PRICE_MULTIPLIER) : autosellPrice(item);
     }
-    
-    var mp = mallPrice(item);
-    if (mp > 0) {
-        return Math.floor(mp * ITEM_PRICE_MULTIPLIER);
-    }
-    
-    // Fallback to autosell
-    return autosellPrice(item);
+    // Per-run cache: repeated historical days use one lookup per item.
+    priceCache[key] = value;
+    return value;
 }
 
 /**
@@ -141,13 +146,13 @@ function readInventoryFile(date, event) {
 /**
  * Calculate total asset value from inventory
  */
-function calculateAssetValue(inventoryData) {
+function calculateAssetValue(inventoryData, priceCache) {
     var total = 0;
     var keys = Object.keys(inventoryData);
     for (var i = 0; i < keys.length; i++) {
         var itemKey = keys[i];
         var count = inventoryData[itemKey];
-        var value = getItemValue(itemKey);
+        var value = getItemValue(itemKey, priceCache);
         total += value * parseInt(count, 10);
     }
     return total;
@@ -504,6 +509,7 @@ function buildGraphData(includeItems) {
     // No baseline needed - we show absolute values now
     
     var dataPoints = [];
+    var priceCache = Object.create(null);
     var skippedDays = 0;
     var inventoryMissing = 0;
     
@@ -552,7 +558,7 @@ function buildGraphData(includeItems) {
                 inventoryMissing++;
             }
             
-            assetValue = calculateAssetValue(inventory);
+            assetValue = calculateAssetValue(inventory, priceCache);
         }
         
         dataPoints.push({

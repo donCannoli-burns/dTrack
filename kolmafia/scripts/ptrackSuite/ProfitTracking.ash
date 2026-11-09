@@ -23,9 +23,11 @@ void LogItems(string event, boolean destruct) {
 		// total_amount() already includes storage, so do NOT auto-pull items.
 		cli_execute("refresh inv");
 		print("Profit: Logging Items...","fuchsia");
-		foreach it in $items[]
-			if ( total_amount(it) != 0 )
-				itemList[it] = total_amount(it);
+		foreach it in $items[] {
+			int amount = total_amount(it);
+			if (amount != 0)
+				itemList[it] = amount;
+		}
 		print("Profit: "+count(itemList)+" items logged to "+today_to_string()+" "+event+".","fuchsia");
 		map_to_file(itemList,"/Profit Tracking/"+my_name()+"/inventory/"+today_to_string()+" "+event+".txt");
 	}
@@ -81,9 +83,11 @@ void LogNetworthCheckpoint(string event) {
 	
 	// Calculate total item value using current prices
 	int totalItemValue = 0;
-	foreach it in $items[]
-		if ( total_amount(it) != 0 )
-			totalItemValue += total_amount(it) * itemValue(it);
+	foreach it in $items[] {
+		int amount = total_amount(it);
+		if (amount != 0)
+			totalItemValue += amount * itemValue(it);
+	}
 	
 	newest.calculateditemvalue = totalItemValue;
 	networthlist[today_to_string(), event] = newest;
@@ -188,10 +192,9 @@ int ProfitCompareItem( boolean silent, string date1, string event1, string date2
 	file_to_map("/Profit Tracking/"+my_name()+"/inventory/"+date1+" "+event1+".txt",itemList1);
 	file_to_map("/Profit Tracking/"+my_name()+"/inventory/"+date2+" "+event2+".txt",itemList2);
 
-	record itemcount { item it; int amount; };
+	record itemcount { item it; int amount; int impact; };
 	itemcount [int] diff;
-	int difference;
-	int profit;
+	int profit = 0;
 
 	boolean[item] blacklistedItems;
 
@@ -200,27 +203,43 @@ int ProfitCompareItem( boolean silent, string date1, string event1, string date2
 		blacklistedItems[it.to_item()] = true;
 	}
 
-	foreach it in $items[] {
-		if ( itemList1[it] != itemList2[it] ) {
-			if(blacklistedItems contains it){
-				continue;
-			}
-
-			difference = itemList2[it]-itemList1[it];
-			diff[diff.count()] = new itemcount(it, difference);
-			profit += difference*itemValue(it);
-		}
+	// Scan only the union of saved snapshot items rather than all game items.
+	boolean[item] recordedItems;
+	foreach it in itemList1
+		recordedItems[it] = true;
+	foreach it in itemList2
+		recordedItems[it] = true;
+	foreach it in recordedItems {
+		if (blacklistedItems contains it)
+			continue;
+		int difference = itemList2[it] - itemList1[it];
+		if (difference == 0)
+			continue;
+		// Value each changed item just once; store its impact for sorting/output.
+		int impact = difference * itemValue(it);
+		diff[count(diff)] = new itemcount(it, difference, impact);
+		profit += impact;
 	}
 	if ( !silent ) {
-		sort diff by value.amount*itemValue(value.it);
+		sort diff by value.impact;
 		print_html("<b>Top 10s (includes items disappearing from mall store):</b>");
-		for i from 0 to 10
-			if ( diff[i].amount < 0 )
-				print(diff[i].amount+" "+diff[i].it+" : "+to_string(diff[i].amount*itemValue(diff[i].it),"%,d"));
+		int shown = 0;
+		foreach index, entry in diff {
+			if (entry.amount < 0 && shown < 10) {
+				print(entry.amount+" "+entry.it+" : "+to_string(entry.impact,"%,d"));
+				shown += 1;
+			}
+		}
 		print("---------------------------------");
-		for i from count(diff)-1 to count(diff)-21
-			if ( diff[i].amount > 0 )
-				print(diff[i].amount+" "+diff[i].it+" : "+to_string(diff[i].amount*itemValue(diff[i].it),"%,d"));
+		shown = 0;
+		if (count(diff) > 0) {
+			for i from count(diff)-1 to 0 {
+				if (diff[i].amount > 0 && shown < 10) {
+					print(diff[i].amount+" "+diff[i].it+" : "+to_string(diff[i].impact,"%,d"));
+					shown += 1;
+				}
+			}
+		}
 	}
 	print_html("<b>Summary:</b>");
 	print("You've earned "+to_string(profit,"%,d")+" in item differences","teal");
